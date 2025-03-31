@@ -5,6 +5,7 @@ import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
 
 import main.config.BrowserConfig;
+import main.utils.FileHandler;
 
 public class Main {
 	public static void main(String[] args) {
@@ -19,7 +20,7 @@ public class Main {
 		String siteUrl = "https://www.gov.br/ans/pt-br/acesso-a-informacao/participacao-da-sociedade/atualizacao-do-rol-de-procedimentos";
 
 		WebDriver driver = new FirefoxDriver(options);
-		Bot downloaderBot = new Bot(driver, standardBasePath);
+		Bot downloaderBot = new Bot(driver);
 
 		final String xpathReference = "/html/body/div[2]/div[1]/main/div[2]/div/div/div/div/div[2]/div/ol/";
 
@@ -33,7 +34,7 @@ public class Main {
 		downloaderBot.downloadByXpath(String.format("%sli[2]/a", xpathReference));
 
 		// Move os arquivos, neste caso os anexos, para um ZIP
-		downloaderBot.moveFilesToZip(zipPath);
+		FileHandler.moveFilesToZip(standardBasePath, downloaderBot.getInteractedFilesNames(), zipPath);
 
 		driver.quit();
 

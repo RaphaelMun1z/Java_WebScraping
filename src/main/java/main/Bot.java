@@ -1,9 +1,7 @@
 package main;
 
-import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.openqa.selenium.By;
@@ -13,26 +11,14 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-import main.utils.Compactor;
-
 public class Bot {
 	private final WebDriver driver;
-	private final String standardBasePath;
 	private final JavascriptExecutor js;
 	private List<String> interactedFilesNames = new ArrayList<>();
 
-	public Bot(WebDriver driver, String standardBasePath) {
+	public Bot(WebDriver driver) {
 		this.driver = driver;
-		this.standardBasePath = standardBasePath;
 		this.js = (JavascriptExecutor) driver;
-	}
-
-	private void sleep(int seconds) {
-		try {
-			Thread.sleep(seconds * 1000);
-		} catch (InterruptedException e) {
-			System.out.println(e.getMessage());
-		}
 	}
 
 	private void scrollToElement(WebElement element) {
@@ -68,43 +54,7 @@ public class Bot {
 		}
 	}
 
-	public void moveFilesToZip(String zipPath) {
-		// Cria uma cópia de targetFileNames
-		List<String> notFoundFiles = new ArrayList<>(interactedFilesNames);
-
-		// Enquanto houver arquivos a serem encontrados, continua monitorando
-		while (!notFoundFiles.isEmpty()) {
-			Iterator<String> iterator = notFoundFiles.iterator();
-
-			while (iterator.hasNext()) {
-				String filename = iterator.next();
-				if (verifyIfFileWasDownloaded(filename)) {
-					iterator.remove();
-					System.out.println("\nBaixou arquivo: " + filename);
-					File file = new File(standardBasePath, filename);
-					Compactor.addFileToZipFolder(file, zipPath);
-				}
-			}
-			sleep(2);
-		}
-	}
-
-	private boolean verifyIfFileWasDownloaded(String targetFileName) {
-		File targetFile = new File(standardBasePath, targetFileName);
-
-		if (targetFile.exists() && !hasRelatedPartFile(targetFileName))
-			return true;
-
-		return false;
-	}
-
-	private boolean hasRelatedPartFile(String filename) {
-		File basePath = new File(standardBasePath);
-		String filenameBase = filename.split("\\.")[0];
-
-		File[] partFiles = basePath
-				.listFiles((dir, name) -> name.endsWith(".part") && name.split("\\.")[0].equals(filenameBase));
-
-		return partFiles != null && partFiles.length > 0;
+	public List<String> getInteractedFilesNames() {
+		return interactedFilesNames;
 	}
 }
