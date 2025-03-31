@@ -1,22 +1,10 @@
 package main;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -31,6 +19,7 @@ public class Bot {
 	private final WebDriver driver;
 	private final String standardBasePath;
 	private final JavascriptExecutor js;
+	private List<String> interactedFilesNames = new ArrayList<>();
 
 	public Bot(WebDriver driver, String standardBasePath) {
 		this.driver = driver;
@@ -69,47 +58,53 @@ public class Bot {
 
 			// Clica no elemento
 			clickElement(downloadButtonElement);
+
+			// Adiciona o nome do arquivo a lista de downloads
+			String href = downloadButtonElement.getAttribute("href");
+			String fileName = href.substring(href.lastIndexOf("/") + 1);
+			interactedFilesNames.add(fileName);
 		} catch (Exception e) {
 			System.err.println("Ocorreu o seguinte erro: " + e.getMessage());
 		}
 	}
 
-	public void targetAllFiles(List<String> targetFileNames, String zipPath) {
-		List<String> notFoundFiles = new ArrayList<>(targetFileNames);
+	public void moveFilesToZip(String zipPath) {
+		// Cria uma cópia de targetFileNames
+		List<String> notFoundFiles = new ArrayList<>(interactedFilesNames);
 
+		// Enquanto houver arquivos a serem encontrados, continua monitorando
 		while (!notFoundFiles.isEmpty()) {
-	        Iterator<String> iterator = notFoundFiles.iterator();
-	        
-	        while (iterator.hasNext()) {
-	            String filename = iterator.next();
-	            if (verifyIfFileWasDownloaded(filename, standardBasePath)) {
-	                iterator.remove();
-	                System.out.println("Baixou arquivo: " + filename);
-	                File file = new File(standardBasePath, filename);
+			Iterator<String> iterator = notFoundFiles.iterator();
+
+			while (iterator.hasNext()) {
+				String filename = iterator.next();
+				if (verifyIfFileWasDownloaded(filename)) {
+					iterator.remove();
+					System.out.println("\nBaixou arquivo: " + filename);
+					File file = new File(standardBasePath, filename);
 					Compactor.addFileToZipFolder(file, zipPath);
-	            }
-	        }
-	        sleep(2);
+				}
+			}
+			sleep(2);
 		}
 	}
 
-	public boolean verifyIfFileWasDownloaded(String targetFileName, String targetPath) {
-		File targetFile = new File(targetPath, targetFileName);
+	private boolean verifyIfFileWasDownloaded(String targetFileName) {
+		File targetFile = new File(standardBasePath, targetFileName);
 
 		if (targetFile.exists() && !hasRelatedPartFile(targetFileName))
 			return true;
 
 		return false;
 	}
-	
-	private boolean hasRelatedPartFile(String filename) {
-	    File basePath = new File(standardBasePath);
-	    String filenameBase = filename.split("\\.")[0];
-	    
-	    File[] partFiles = basePath.listFiles((dir, name) -> 
-	        name.endsWith(".part") && name.split("\\.")[0].equals(filenameBase)
-	    );
 
-	    return partFiles != null && partFiles.length > 0;
+	private boolean hasRelatedPartFile(String filename) {
+		File basePath = new File(standardBasePath);
+		String filenameBase = filename.split("\\.")[0];
+
+		File[] partFiles = basePath
+				.listFiles((dir, name) -> name.endsWith(".part") && name.split("\\.")[0].equals(filenameBase));
+
+		return partFiles != null && partFiles.length > 0;
 	}
 }

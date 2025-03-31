@@ -1,8 +1,5 @@
 package main;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
@@ -14,7 +11,7 @@ public class Main {
 		System.out.println("Bot iniciou suas tarefas.");
 
 		final String standardBasePath = "C:\\PDFs";
-		final String zipPath = standardBasePath + "\\Anexos.zip";
+		final String zipPath = String.format("%s\\Anexos.zip", standardBasePath);
 
 		BrowserConfig config = new BrowserConfig(standardBasePath);
 		FirefoxOptions options = config.getFirefoxOptions();
@@ -35,20 +32,11 @@ public class Main {
 		// Baixa anexo
 		downloaderBot.downloadByXpath(String.format("%sli[2]/a", xpathReference));
 
-		// Move arquivos para o ZIP
-		// downloaderBot.moveFilesToZip(zipPath);
-
-		try {
-			List<String> filenames = new ArrayList<>();
-			filenames.add("Anexo_I_Rol_2021RN_465.2021_RN627L.2024.pdf");
-			filenames.add("Anexo_II_DUT_2021_RN_465.2021_RN628.2025_RN629.2025.pdf");
-			downloaderBot.targetAllFiles(filenames, zipPath);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		// Move os arquivos, neste caso os anexos, para um ZIP
+		downloaderBot.moveFilesToZip(zipPath);
 
 		driver.quit();
 
-		System.out.println("Bot finalizou suas tarefas.");
+		System.out.println("\nBot finalizou suas tarefas.");
 	}
 }
