@@ -1,9 +1,22 @@
 package main;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -16,14 +29,12 @@ import main.utils.Compactor;
 
 public class Bot {
 	private final WebDriver driver;
-	private final String downloadDir;
-	private final String zipDir;
+	private final String standardBasePath;
 	private final JavascriptExecutor js;
 
-	public Bot(WebDriver driver, String downloadDir, String zipDir) {
+	public Bot(WebDriver driver, String standardBasePath) {
 		this.driver = driver;
-		this.downloadDir = downloadDir;
-		this.zipDir = zipDir;
+		this.standardBasePath = standardBasePath;
 		this.js = (JavascriptExecutor) driver;
 	}
 
@@ -63,56 +74,42 @@ public class Bot {
 		}
 	}
 
-	public void verifyIfAllFilesHasBeenDownloaded() throws Exception {
-		// Diretório onde se encontram os arquivos
-		File dir = new File(downloadDir);
+	public void targetAllFiles(List<String> targetFileNames, String zipPath) {
+		List<String> notFoundFiles = new ArrayList<>(targetFileNames);
 
-		// Tempo limite de espera pelo download
-		long waitLimitTime = System.currentTimeMillis() + 25000;
-
-		Compactor compactor = new Compactor(zipDir);
-
-		// Enquanto estiver dentro do limite de tempo, realizar verificações
-		while (System.currentTimeMillis() < waitLimitTime) {
-			// Armazena os arquivos sendo baixados (contém extensão '.part', no caso do
-			// firefox)
-			File[] downloadingFiles = dir.listFiles((dir1, name) -> name.endsWith(".part"));
-
-			// Armazena o nome formatado dos arquivos sendo baixados
-			Set<String> downloadingSet = new HashSet<>();
-
-			for (File file : downloadingFiles) {
-				// Divide o nome do arquivo onde tiver '.', pois é criado uma espécie de hash no
-				// nome do arquivo que contém extensão '.part'
-				String[] parts = file.getName().split("\\.");
-				if (parts.length > 2) {
-					StringBuilder formattedFileName = new StringBuilder(parts[0]);
-					// Formata o nome do arquivo
-					for (int ii = 2; ii < (parts.length - 1); ii++)
-						formattedFileName.append(".").append(parts[ii]);
-
-					downloadingSet.add(formattedFileName.toString());
-				}
-			}
-
-			File[] downloadedFiles = dir
-					.listFiles((dir1, name) -> name.endsWith(".pdf") && !downloadingSet.contains(name));
-
-			// Ao finalizar o download do arquivo, já realizo a transferência para a pasta
-			// compactada
-			for (File f : downloadedFiles) {
-				compactor.addFileToZipFolder(f);
-			}
-
-			System.out.println("Há " + downloadingFiles.length + " arquivos sendo baixados...\n");
-			if (downloadingSet.size() == 0 && downloadedFiles != null && downloadedFiles.length > 0) {
-				System.out.println("Todos os arquivos foram baixados com sucesso!");
-				return;
-			}
-
-			sleep(1);
+		while (!notFoundFiles.isEmpty()) {
+	        Iterator<String> iterator = notFoundFiles.iterator();
+	        
+	        while (iterator.hasNext()) {
+	            String filename = iterator.next();
+	            if (verifyIfFileWasDownloaded(filename, standardBasePath)) {
+	                iterator.remove();
+	                System.out.println("Baixou arquivo: " + filename);
+	                File file = new File(standardBasePath, filename);
+					Compactor.addFileToZipFolder(file, zipPath);
+	            }
+	        }
+	        sleep(2);
 		}
+	}
 
-		throw new Exception("Tempo máximo atingido!");
+	public boolean verifyIfFileWasDownloaded(String targetFileName, String targetPath) {
+		File targetFile = new File(targetPath, targetFileName);
+
+		if (targetFile.exists() && !hasRelatedPartFile(targetFileName))
+			return true;
+
+		return false;
+	}
+	
+	private boolean hasRelatedPartFile(String filename) {
+	    File basePath = new File(standardBasePath);
+	    String filenameBase = filename.split("\\.")[0];
+	    
+	    File[] partFiles = basePath.listFiles((dir, name) -> 
+	        name.endsWith(".part") && name.split("\\.")[0].equals(filenameBase)
+	    );
+
+	    return partFiles != null && partFiles.length > 0;
 	}
 }

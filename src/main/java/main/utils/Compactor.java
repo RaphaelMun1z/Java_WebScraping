@@ -13,21 +13,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Compactor {
-	private final String zipFolderPath;
-
-	public Compactor(String zipFolderPath) {
-		this.zipFolderPath = zipFolderPath;
-	}
-
-	public void addFileToZipFolder(File fileToBeTransferred) {
-		Map<String, String> zip_properties = new HashMap<>();
-		zip_properties.put("create", "true");
-		zip_properties.put("encoding", "UTF-8");
+	public static void addFileToZipFolder(File fileToBeTransferred, String zipFolderPath) {
+		// Configurações do ZIP
+		Map<String, String> zipConfig = new HashMap<>();
+		// O ZIP vai ser criado caso não exista
+		zipConfig.put("create", "true");
+		zipConfig.put("encoding", "UTF-8");
 
 		Path zipPath = Paths.get(zipFolderPath);
 		URI zip_disk = URI.create("jar:" + zipPath.toUri());
 
-		try (FileSystem zipfs = FileSystems.newFileSystem(zip_disk, zip_properties)) {
+		try (FileSystem zipfs = FileSystems.newFileSystem(zip_disk, zipConfig)) {
 			Path originalFilePath = Paths.get(fileToBeTransferred.getAbsolutePath());
 			Path zipFilePath = zipfs.getPath(fileToBeTransferred.getName());
 
